@@ -15,8 +15,11 @@ sort: sort.o
 queue: queue.o
 	$(CC) queue.o -o queue
 
-main: main.o sort.o queue.o scheduler.o 
-	$(CC) main.o sort.o queue.o scheduler.o -o main
+io_list: io_list.o
+	$(CC) io_list.o -o io_list
+
+main: main.o sort.o queue.o scheduler.o io_list.o
+	$(CC) main.o sort.o queue.o scheduler.o io_list.o -o main
 
 scheduler.o: scheduler.c
 	$(CC) -c $(CFLAGS) scheduler.c
@@ -26,6 +29,9 @@ queue.o: queue.c
 
 sort.o: sort.c
 	$(CC) -c $(CFLAGS) sort.c
+
+io_list.o: io_list.c
+	$(CC) -c $(CFLAGS) io_list.c
 
 main.o: main.c
 	$(CC) -c $(CFLAGS) main.c

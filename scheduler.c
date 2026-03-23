@@ -87,7 +87,7 @@ job_t** parse(){
         job->runtime = service;
         job->priority = priority;
         job->remaining_time = service;
-        job->status = 0;
+        job->status = NEW;
 
         jobs[counter] = job;
         counter++;
