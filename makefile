@@ -6,6 +6,9 @@ CFLAGS := -Wall
 
 all: $(TARGETS)
 
+display: display.o
+	$(CC) display.o -o display
+
 scheduler: scheduler.o
 	$(CC) scheduler.o -o scheduler
 
@@ -15,8 +18,11 @@ sort: sort.o
 queue: queue.o
 	$(CC) queue.o -o queue
 
-main: main.o sort.o queue.o scheduler.o 
-	$(CC) main.o sort.o queue.o scheduler.o -o main
+main: main.o sort.o queue.o scheduler.o display.o
+	$(CC) main.o sort.o queue.o scheduler.o display.o -o main
+
+display.o: display.c 
+	$(CC) -c $(CFLAGS) display.c
 
 scheduler.o: scheduler.c
 	$(CC) -c $(CFLAGS) scheduler.c

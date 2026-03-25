@@ -25,7 +25,7 @@ int input(){
     return schedule;
 }
 
-// function for using qsort on jobs array
+// function to sort jobs array by arrival time
 int comp(const void* a, const void* b){
     job_t* arg1 = *(job_t**)a;
     job_t* arg2 = *(job_t**)b;
@@ -37,6 +37,18 @@ int comp(const void* a, const void* b){
             return 1;
         }
     } else if (arg1->arrival_time < arg2->arrival_time){
+        return -1;
+    } else {
+        return 1;
+    }
+}
+
+// function to sort jobs array by pid
+int comp_pid(const void*a, const void* b){
+    job_t* arg1 = *(job_t**)a;
+    job_t* arg2 = *(job_t**)b;
+
+    if (arg1->pid < arg2->pid){
         return -1;
     } else {
         return 1;
@@ -86,8 +98,12 @@ job_t** parse(){
         job->arrival_time = arrival;
         job->runtime = service;
         job->priority = priority;
+        
         job->remaining_time = service;
         job->status = 0;
+        job->io_time = 0;
+        job->ready_time = 0;
+        job->total_time = 0;
 
         jobs[counter] = job;
         counter++;
@@ -99,15 +115,6 @@ job_t** parse(){
     qsort(jobs, num, sizeof(jobs[0]), comp);
 
     return jobs;
-}
-
-void free_jobs(job_t** jobs){
-    int size = sizeof(jobs)/sizeof(job_t); // calculate size of array
-    for(int i = 0; i < size ; i++){
-        free(jobs[i]);
-    }
-
-    free(jobs);
 }
 
 // srand wrapper
@@ -136,5 +143,53 @@ int IO_complete(){
         return 1;
     } else {
         return 0;
+    }
+}
+
+int add_jobs(int clock, int pointer, int num_jobs, job_t** jobs, queue_t* ready_q){
+    for(int i = pointer; i < num_jobs; i++){
+        if(jobs[i]->arrival_time > clock){
+            pointer = i;
+            break;
+        }
+
+        if(i + 1 == num_jobs){
+            pointer = num_jobs;
+        }
+
+        jobs[i]->status = 1; // status as ready
+        enqueue(ready_q, jobs[i]);
+    }
+
+    return pointer;
+}
+
+void wake_io(queue_t* io_q, queue_t* ready_q){
+    node_t* temp = io_q->head;
+    node_t* prev;
+
+    while(temp != NULL){ 
+        temp->data->io_time++;
+        
+        if(IO_complete() == 1){
+            // printf("Job %d io is complete\n", temp->data->pid);
+            // extract the node with the job that has completed io
+            if(temp == io_q->head){ 
+                temp = temp->next;
+                job_t* head_job = dequeue(io_q);
+                head_job->status = 1;
+                enqueue(ready_q, head_job);
+            } else {
+                prev->next = temp->next;
+                temp->data->status = 1;
+                enqueue(ready_q, temp->data);
+                free(temp);
+                temp = prev->next;
+                io_q->elements--;
+            }
+        } else {
+            prev = temp;
+            temp = prev->next;
+        }
     }
 }

@@ -33,7 +33,7 @@ void enqueue(queue_t* queue, job_t* element);
 
 job_t* dequeue(queue_t* queue); 
 
-// void display_queue(queue_t* q);
+void display_queue(queue_t* q);
 
 void destroy_queue(queue_t* queue);
 
