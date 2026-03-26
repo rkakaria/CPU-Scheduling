@@ -2,169 +2,185 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include "queue.h"
-#include "io_list.h"
 #include "sort.h"
 #include "scheduler.h"
+#include "display.h"
+#include "sort.h"
+#include <stdio.h>
 
+#ifndef TRACE
+#define TRACE 1
+#endif
 
-// Jonas: MLFS
-// Reva: Preemptive SJF
-// Nikhil: Round Robin
+#if TRACE
+#define TRACE_LOG(...) do { fprintf(stderr, __VA_ARGS__); } while (0)
+#else
+#define TRACE_LOG(...) do { } while (0)
+#endif
 
+algorithm_t schedule = SJF;
 
-int main(){
-#define TRACE(fmt, ...) printf("[TRACE t=%d] " fmt, clock, ##__VA_ARGS__)
-    // int selection = input();
+static const char* status_to_string(process_state status){
+    switch(status){
+        case NEW: return "NEW";
+        case READY: return "READY";
+        case RUNNING: return "RUNNING";
+        case WAITING: return "WAITING";
+        case TERMINATED: return "TERMINATED";
+        default: return "UNKNOWN";
+    }
+}
 
-    job_t** jobs = parse(); // all jobs
-    int num_jobs = number_jobs();
-    int pointer = 0; // pointer to keep track of which jobs in sorted array have arrived
-
-    /* initialize clock */
-    int clock = 0;
-    /* seeds the random number generator if you use rand(), or srand() */
-    os_srand(1); // wrapper - call srand if you use stdnlib rand()
-   
-    // add new incoming jobs to the "ready to run" queue
-    queue_t* ready_q = create_queue(); // ready jobs queue
-   
-    // enqueue jobs that arrived at t0
-    TRACE("loaded %d jobs from input_file.txt\n", num_jobs);
-    for(int i = 0; i < num_jobs; i++){
-        if(jobs[i]->arrival_time > 0){
-            pointer = i;
-            break;
-        }
-
-        enqueue(ready_q, jobs[i]);
-        TRACE("initial-arrival pid=%d enqueued_to_ready (ready=%d)\n",
-              jobs[i]->pid, ready_q->elements);
+static void trace_job_state(const char* event, int clock, job_t* job){
+    if(job == NULL){
+        TRACE_LOG("[TRACE t=%d] %s job=NULL\n", clock, event);
+        return;
     }
 
-    io_list_t* io_q = io_list_create(); // jobs sleeping on io
+    TRACE_LOG(
+        "[TRACE t=%d] %s pid=%d status=%s remaining=%d cpu=%d arrival=%d\n",
+        clock,
+        event,
+        job->pid,
+        status_to_string(job->status),
+        job->remaining_time,
+        job->cpu_time,
+        job->arrival_time
+    );
+}
+
+int main(){
+    // int selection = input();
+
+    job_t** jobs = parse(); // array to store all jobs, sorted by arrival time
+    int num_jobs = number_jobs(); // number of total jobs
+    int complete_jobs = 0; // number of completed jobs
+    int pointer = 0; // track which jobs in the jobs array have arrived
+    int clock = 0; // initialize clock
     
-    while(ready_q->elements > 0){ // main coordinator loop
-        job_t* current_job = dequeue(ready_q);
-        current_job->status = RUNNING;
-        TRACE("dispatch pid=%d from_ready (ready=%d io=%d rem=%d)\n",
-              current_job->pid, ready_q->elements, io_q->elements, current_job->remaining_time);
+    os_srand(1); // seed the random number generator
+    TRACE_LOG("[TRACE t=%d] scheduler_start num_jobs=%d\n", clock, num_jobs);
+   
+    /* Initialize ready queue with jobs that have arrived
+    at t0 */
+    queue_t* ready_q = create_queue();
+    pointer = add_jobs(clock, pointer, num_jobs, jobs, ready_q);
+    TRACE_LOG("[TRACE t=%d] initial_arrivals pointer=%d\n", clock, pointer);
+
+    queue_t* io_q = create_queue(); // queue for jobs sleeping on io
+    job_t* current_job = NULL;
+    
+
+    while(complete_jobs < num_jobs){ // main coordinator loop
+
+        if (ready_q->elements > 0){
+            current_job = dequeue(ready_q);
+            current_job->status = RUNNING;
+            trace_job_state("Current Job set to: %d", clock, current_job);
+        }
 
         while(true){ /* this loop is the main process management loop */
+            clock++;
+            bool preemption = false; // placeholder for preemption
+
+            if (current_job != NULL){
+                current_job->cpu_time++;
+                current_job->remaining_time--;
+                trace_job_state("tick", clock, current_job);
+            }
 
             /**
              * Step 1: Add new arriving jobs to the ready to run queue
              */
-            TRACE("Step 1\n");
-            // add new incoming jobs to the ready to run state
-            for(int i = pointer; i < num_jobs; i++){
-                // check if the job is already in the ready to run queue
-                if (jobs[i]->status == READY){
-                    continue;
-                }
-                // check if job has arrived
-                if(jobs[i]->arrival_time > clock){
-                    pointer = i;
-                    break;
-                }
+            // add new incoming jobs
+            pointer = add_jobs(clock, pointer, num_jobs, jobs, ready_q); 
+            TRACE_LOG("[TRACE t=%d] add_jobs pointer=%d\n", clock, pointer);
 
-                // update state to ready
-                jobs[i]->status = READY;
-                enqueue(ready_q, jobs[i]);
-                TRACE("arrival pid=%d enqueued_to_ready (ready=%d)\n",
-                      jobs[i]->pid, ready_q->elements);
-            }
 
             /**
              * Step 2: Check to see if any of the jobs in the wait queue have completed their I/O -> if yes add to ready to run queue
              */
-             TRACE("Step 2\n");
-            io_node_t* current = io_list_begin(io_q);
-            while (current != io_list_end(io_q)) {
-                io_node_t* next = current->next;
-                current->data->io_time++; // increment io time for each job in the io 
-                TRACE("io-check pid=%d io_time=%d\n",
-                      current->data->pid, current->data->io_time);
+            // check for jobs completing I/O
+            wake_io(io_q, ready_q);
+            TRACE_LOG("[TRACE t=%d] wake_io_checked\n", clock);
 
-                // check to see if the job has completed its I/O
-                if (IO_complete()) {
-                    int completed_pid = current->data->pid;
-                    // remove from io queue and add to the ready to run queue
-                    enqueue(ready_q, current->data);
-                    io_list_remove_node(io_q, current);
-                    TRACE("io-complete pid=%d moved_to_ready (ready=%d io=%d)\n",
-                          completed_pid, ready_q->elements, io_q->elements);
-                }
-                current = next;
-            }
+            // check if the current job is null if so bookkeep and break
+            if (current_job == NULL || current_job->status == TERMINATED){
+                update_queue_bookkeeping(io_q, ready_q, schedule);
+                trace_job_state("break_null_or_terminated", clock, current_job);
+                break;
+             }
         
 
             /**
              * Step 3a: Check to see if the current job has finished its work -> if yes mark as swapped out (job complete, exit)
              * update stats and bookkeeping for the job, increment clock, break from loop
              */
-             TRACE("Step 3a\n");
              if (current_job -> remaining_time == 1){
                 // update stats
                 current_job->total_time = clock - current_job->arrival_time;
-                current_job->cpu_time = current_job->total_time;
 
                 // update state to terminated
                 current_job->status = TERMINATED;
-                // increment clock
-                clock++;
-                TRACE("terminate pid=%d total=%d cpu=%d (ready=%d io=%d)\n",
-                      current_job->pid, current_job->total_time, current_job->cpu_time,
-                      ready_q->elements, io_q->elements);
-                // break from loop
+                trace_job_state("job_terminated", clock, current_job);
+
+                complete_jobs++;
+                TRACE_LOG("[TRACE t=%d] complete_jobs=%d/%d\n", clock, complete_jobs, num_jobs);
+
+             } else if (preemption){
+                /**
+                * Step 4: Check to see if the current job has been preempted -> if yes mark as swapped out (preempted)
+                * update state: 
+                */
+                // switch status back to ready
+                current_job->status = READY;
+                // add back to ready queue
+                enqueue(ready_q, current_job);
+                trace_job_state("job_preempted", clock, current_job);
+             } else{
+                // IO Request
+                /**
+                * Step 5: Check for I/O request from current job -> if yes mark as swapped out (sleeping on I/O)
+                */
+                if (IO_request()){
+                    // mark as swapped out (sleeping on I/O)
+                    current_job->status = WAITING;
+                    // add to io queue
+                    enqueue(io_q, current_job);
+                    trace_job_state("move current job to io queue due to IO request", clock, current_job);
+                }
+             }
+
+            // bookkeeping for all queued jobs for this tick and sort the ready queue
+            update_queue_bookkeeping(io_q, ready_q, schedule);
+
+
+            if (current_job == NULL || current_job->status != RUNNING){
+                trace_job_state("Current Job is not running, breaking loop", clock, current_job);
                 break;
              }
 
-
-            /**
-             * Step 4: Check to see if the current job has been preempted -> if yes mark as swapped out (preempted)
-             * update state: 
-             */
-            // if you run a preemptive scheduler and there are now higher
-            // priority jobs on the "ready to run" state then :
-                // mark current_job as swapped out (preempted)
-
-
-            /**
-             * Step 5: Check for I/O request from current job -> if yes mark as swapped out (sleeping on I/O)
-             */
-            if (IO_request()){
-                // mark as swapped out (sleeping on I/O)
-                current_job->status = WAITING;
-                // add to io queue
-                io_list_append(io_q, current_job);
-                TRACE("io-request pid=%d moved_to_io (io=%d)\n",
-                      current_job->pid, io_q->elements);
-            }
-
-
-            // if status == 1 /* need to do I/O */
-                // then mark current_job as swapped out (sleeping on I/O)
-            // else if this job has been on the CPU for an entire time-slice
-                // then mark the job as swapped out (end of time-slice) and
-                // move it to the ready to run state
-
-
-            // do bookkeeping and statistics
-            clock++;
-            // if current_ job was swapped out then move the job to the appropriate
-            // queue and break from this loop
-
+        } /* End while main process management loop */        
+        if (clock > 20){
             break;
-        } /* End while main process management loop */
-        
-        TRACE("end-outer-iteration ready=%d io=%d\n", ready_q->elements, io_q->elements);
+         }
     } /* End while if there are no jobs in the system */
    
-    TRACE("simulation-end\n");
-    #undef TRACE
-    free_jobs(jobs);
+    // sort jobs by pid and display statistics
+    qsort(jobs, num_jobs, sizeof(jobs[0]), comp_pid);
+
+    print_header();
+    print_data(clock, jobs, num_jobs);
+
+    // free memory
+    for(int i = 0; i < num_jobs; i++){
+        free(jobs[i]);
+        jobs[i] = NULL;
+    }
+
+    free(jobs);
     destroy_queue(ready_q);
-    io_list_destroy(io_q);
+    destroy_queue(io_q);
     
     return 0;
 }

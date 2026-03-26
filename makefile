@@ -6,6 +6,9 @@ CFLAGS := -Wall
 
 all: $(TARGETS)
 
+display: display.o
+	$(CC) display.o -o display
+
 scheduler: scheduler.o
 	$(CC) scheduler.o -o scheduler
 
@@ -15,11 +18,11 @@ sort: sort.o
 queue: queue.o
 	$(CC) queue.o -o queue
 
-io_list: io_list.o
-	$(CC) io_list.o -o io_list
+main: main.o sort.o queue.o scheduler.o display.o
+	$(CC) main.o sort.o queue.o scheduler.o display.o -o main
 
-main: main.o sort.o queue.o scheduler.o io_list.o
-	$(CC) main.o sort.o queue.o scheduler.o io_list.o -o main
+display.o: display.c 
+	$(CC) -c $(CFLAGS) display.c
 
 scheduler.o: scheduler.c
 	$(CC) -c $(CFLAGS) scheduler.c
@@ -29,9 +32,6 @@ queue.o: queue.c
 
 sort.o: sort.c
 	$(CC) -c $(CFLAGS) sort.c
-
-io_list.o: io_list.c
-	$(CC) -c $(CFLAGS) io_list.c
 
 main.o: main.c
 	$(CC) -c $(CFLAGS) main.c

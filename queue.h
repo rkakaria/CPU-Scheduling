@@ -1,9 +1,9 @@
 #ifndef QUEUE_H
 #define QUEUE_H
 
-enum process_state {
+typedef enum process_state {
     NEW, READY, RUNNING, WAITING, TERMINATED
-};
+} process_state;
 
 
 typedef struct job{
@@ -18,7 +18,7 @@ typedef struct job{
     int cpu_time; // time spent on CPU
     int total_time; // total time spent in system
     int remaining_time;
-    enum process_state status;
+    process_state status;
 } job_t;
 
 typedef struct node{
@@ -39,7 +39,7 @@ void enqueue(queue_t* queue, job_t* element);
 
 job_t* dequeue(queue_t* queue); 
 
-// void display_queue(queue_t* q);
+void display_queue(queue_t* q);
 
 void destroy_queue(queue_t* queue);
 

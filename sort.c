@@ -153,7 +153,7 @@ node_t* merge_mlfq(node_t* left, node_t* right){
     return newlist;
 }
 
-node_t* merge_sort(node_t* head, char* schedule){
+node_t* merge_sort(node_t* head, algorithm_t schedule){
     if(head == NULL || head->next == NULL){
         return head;
     }
@@ -164,11 +164,11 @@ node_t* merge_sort(node_t* head, char* schedule){
     left = merge_sort(left, schedule);
     right = merge_sort(right, schedule);
 
-    if(strcmp(schedule, "sjf") == 0){
+    if(schedule == SJF){ // sort by remaining time
         return merge_sjf(left, right);
-    } else if(strcmp(schedule, "mlfq") == 0){
+    } else if(schedule == MLFQ){ // sort by priority
         return merge_mlfq(left, right);
-    } else {
+    } else { // sort by arrival time
         return merge(left, right);
     }
 }
