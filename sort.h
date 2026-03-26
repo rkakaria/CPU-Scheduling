@@ -2,6 +2,9 @@
 #define SORT_H
 #include "queue.h"
 
+/* This file defines functions to merge sort 
+a queue based on different characteristics of jobs. */
+
 typedef enum {
     RR, SJF, MLFQ
 } algorithm_t;

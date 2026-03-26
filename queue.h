@@ -1,6 +1,10 @@
 #ifndef QUEUE_H
 #define QUEUE_H
 
+typedef enum process_state {
+    NEW, READY, RUNNING, WAITING, TERMINATED
+} state_t;
+
 typedef struct job{
     // from input file
     int pid;
@@ -12,7 +16,8 @@ typedef struct job{
     int ready_time;
     int total_time;
     int remaining_time;
-    int status; // assign status codes?
+    int cpu_time;
+    state_t status;
 } job_t;
 
 typedef struct node{

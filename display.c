@@ -38,5 +38,5 @@ void print_data(int clock, job_t** jobs, int num_jobs){
     printf("Longest job completion time: %d\n", longest);
     printf("Average completion time: %0.2f\n", average_completion/num_jobs);
     printf("Average time in ready queue: %0.2f\n", average_ready/num_jobs);
-    printf("Average time sleeping on I/O state: %0.2f\n", average_io/num_jobs);
+    printf("Average time sleeping on I/O state: %0.2f\n\n", average_io/num_jobs);
 }

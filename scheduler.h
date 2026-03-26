@@ -1,10 +1,11 @@
 #ifndef SCHEDULER_H
 #define SCHEDULER_H
 #include "queue.h"
+#include "sort.h"
 
 void os_srand(int seed);
 
-int input();
+algorithm_t input();
 
 int comp(const void* a, const void* b);
 
