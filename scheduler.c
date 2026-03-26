@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include "scheduler.h"
+#include "sort.h"
 
 // ask user for which algorithm to run
 int input(){
@@ -100,7 +101,7 @@ job_t** parse(){
         job->priority = priority;
         
         job->remaining_time = service;
-        job->status = 0;
+        job->status = NEW;
         job->io_time = 0;
         job->ready_time = 0;
         job->total_time = 0;
@@ -157,7 +158,7 @@ int add_jobs(int clock, int pointer, int num_jobs, job_t** jobs, queue_t* ready_
             pointer = num_jobs;
         }
 
-        jobs[i]->status = 1; // status as ready
+        jobs[i]->status = READY ; // status as ready
         enqueue(ready_q, jobs[i]);
     }
 
@@ -190,6 +191,30 @@ void wake_io(queue_t* io_q, queue_t* ready_q){
         } else {
             prev = temp;
             temp = prev->next;
+        }
+    }
+}
+
+void update_queue_bookkeeping(queue_t* io_q, queue_t* ready_q, algorithm_t schedule){
+    node_t* temp = NULL;
+
+    if(io_q != NULL){
+        temp = io_q->head;
+        while(temp != NULL){
+            temp->data->io_time++;
+            temp = temp->next;
+        }
+    }
+
+    if(ready_q != NULL){
+        temp = ready_q->head;
+        while(temp != NULL){
+            temp->data->ready_time++;
+            temp = temp->next;
+        }
+
+        if(ready_q->head != NULL && ready_q->head->next != NULL){
+            ready_q->head = merge_sort(ready_q->head, schedule);
         }
     }
 }
