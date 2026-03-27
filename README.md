@@ -34,9 +34,16 @@ The array of all jobs is then checked to determine whether any jobs are arriving
 
 At this time, all jobs that could possibly be ready in the next iteration have been added to the ready queue, so we sort the queue by whatever priority is needed for the specific algorithm. 
 
-We then determine what the state of the current job will be on the next iteration. If there is no current job because there were no ready jobs to choose from, the loop breaks. Otherwise, we update the statistics of the current job, and then we check whether the current job is complete; if not, we check if will be preempted by any of the ready jobs; if not, we check if requests I/O. In each of these cases, the status that the current job should start with on the next iteration is updated.
+We then determine what the state of the current job will be on the next iteration. If there is no current job because there were no ready jobs to choose from, the loop breaks. This is our implementation of an "idle" process, for the case where no process is running and we do not need to track statistics for this pseudo-process. Otherwise, we update the statistics of the current job, and then we check whether the current job is complete; if not, we check if will be preempted by any of the ready jobs; if not, we check if requests I/O. In each of these cases, the status that the current job should start with on the next iteration is updated.
 
 If the status of the current job is no longer RUNNING (i.e. it is TERMINATED, WAITING, or READY), the inner loop breaks. We return to the outer loop, where we choose a new current job from the ready queue, which has already been sorted by priority. Then we enter the inner loop at t = 2 and repeat the process.
+
+Additional assumptions:
+- The priority of jobs is >= 0.
+- The PID of jobs is >= 0.
+- The arrival time of jobs is >= 0.
+- The service time of jobs is > 0.
+- The number of total arriving jobs is >= 0.
 
 ### Test Cases
 
