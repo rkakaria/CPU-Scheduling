@@ -105,6 +105,7 @@ job_t** parse(){
         job->io_time = 0;
         job->ready_time = 0;
         job->total_time = 0;
+        job->time_slice_used = 0;
 
         jobs[counter] = job;
         counter++;
@@ -179,10 +180,13 @@ void wake_io(queue_t* io_q, queue_t* ready_q){
                 temp = temp->next;
                 job_t* head_job = dequeue(io_q);
                 head_job->status = 1;
+                head_job->time_slice_used = 0;  
                 enqueue(ready_q, head_job);
+                
             } else {
                 prev->next = temp->next;
                 temp->data->status = 1;
+                temp->data->time_slice_used = 0; 
                 enqueue(ready_q, temp->data);
                 free(temp);
                 temp = prev->next;

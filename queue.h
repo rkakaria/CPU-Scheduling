@@ -18,6 +18,7 @@ typedef struct job{
     int cpu_time; // time spent on CPU
     int total_time; // total time spent in system
     int remaining_time;
+    int time_slice_used; // for mlfq only
     process_state status;
 } job_t;
 

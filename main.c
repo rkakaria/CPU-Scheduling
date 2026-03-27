@@ -18,7 +18,10 @@
 #define TRACE_LOG(...) do { } while (0)
 #endif
 
-algorithm_t schedule = SJF;
+algorithm_t schedule = MLFQ;
+
+#define MLFQ_MAX_PRIORITY 2
+#define MLFQ_BOOST_INTERVAL 25
 
 static const char* status_to_string(process_state status){
     switch(status){
@@ -76,12 +79,25 @@ int main(){
         if (ready_q->elements > 0){
             current_job = dequeue(ready_q);
             current_job->status = RUNNING;
+            current_job->time_slice_used = 0;
             trace_job_state("Current Job set to: %d", clock, current_job);
         }
 
         while(true){ /* this loop is the main process management loop */
-            clock++;
+            clock++;            
             bool preemption = false; // placeholder for preemption
+            
+            if (schedule == MLFQ && current_job != NULL) {
+                if (current_job->time_slice_used >= 2){
+                    if (current_job->priority < MLFQ_MAX_PRIORITY) {
+                        current_job->priority++;
+                    }
+                    current_job -> time_slice_used = 0;
+                    preemption = true;
+                } else {
+                    current_job -> time_slice_used++;
+                }
+            }
 
             if (current_job != NULL){
                 current_job->cpu_time++;
@@ -116,7 +132,7 @@ int main(){
              * Step 3a: Check to see if the current job has finished its work -> if yes mark as swapped out (job complete, exit)
              * update stats and bookkeeping for the job, increment clock, break from loop
              */
-             if (current_job -> remaining_time == 1){
+             if (current_job -> remaining_time == 0){
                 // update stats
                 current_job->total_time = clock - current_job->arrival_time;
 
@@ -128,6 +144,7 @@ int main(){
                 TRACE_LOG("[TRACE t=%d] complete_jobs=%d/%d\n", clock, complete_jobs, num_jobs);
 
              } else if (preemption){
+                
                 /**
                 * Step 4: Check to see if the current job has been preempted -> if yes mark as swapped out (preempted)
                 * update state: 
@@ -150,6 +167,17 @@ int main(){
                     trace_job_state("move current job to io queue due to IO request", clock, current_job);
                 }
              }
+            
+            if (schedule == MLFQ){
+                if (clock % MLFQ_BOOST_INTERVAL == MLFQ_BOOST_INTERVAL - 1){
+                    for (int i = 0; i < num_jobs; i++) {
+                        if (jobs[i]->status != TERMINATED) {
+                            jobs[i]->priority = 0;
+                            jobs[i]->time_slice_used = 0;
+                        }
+                    }
+                }
+            }
 
             // bookkeeping for all queued jobs for this tick and sort the ready queue
             update_queue_bookkeeping(io_q, ready_q, schedule);
@@ -161,9 +189,8 @@ int main(){
              }
 
         } /* End while main process management loop */        
-        if (clock > 20){
-            break;
-         }
+
+
     } /* End while if there are no jobs in the system */
    
     // sort jobs by pid and display statistics
