@@ -6,7 +6,7 @@
 #define CHANCE_OF_IO_REQUEST 6
 #define CHANCE_OF_IO_COMPLETE 4
 
-#define INPUT_FILE "test_cases/test_input_4.txt"
+#define INPUT_FILE "test_cases/test_input_2.txt"
 
 // ask user for which algorithm to run
 algorithm_t input(){
@@ -147,7 +147,7 @@ int os_rand(){
 }
 
 int IO_request(){ 
-    // return 0;
+    return 0;
     if(os_rand() % CHANCE_OF_IO_REQUEST == 0 ){
         return 1;
     } else {
@@ -187,9 +187,7 @@ void wake_io(queue_t* io_q, queue_t* ready_q){
     node_t* temp = io_q->head;
     node_t* prev;
 
-    while(temp != NULL){ 
-        temp->data->io_time++;
-        
+    while(temp != NULL){         
         if(IO_complete() == 1){
             // extract the node with the job that has completed io
             if(temp == io_q->head){ 
@@ -212,7 +210,7 @@ void wake_io(queue_t* io_q, queue_t* ready_q){
     }
 }
 
-void update_queue_bookkeeping(queue_t* io_q, queue_t* ready_q, algorithm_t schedule){
+void update_queue_bookkeeping(queue_t* io_q, queue_t* ready_q){
     node_t* temp = NULL;
 
     if(io_q != NULL){
@@ -229,10 +227,6 @@ void update_queue_bookkeeping(queue_t* io_q, queue_t* ready_q, algorithm_t sched
         while(temp != NULL){
             temp->data->ready_time++;
             temp = temp->next;
-        }
-
-        if(ready_q->head != NULL && ready_q->head->next != NULL && schedule != RR){
-            ready_q->head = merge_sort(ready_q->head, schedule);
         }
     }
 }

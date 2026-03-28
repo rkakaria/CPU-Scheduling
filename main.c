@@ -90,6 +90,9 @@ int main(){
                 trace_job_state("TICK", clock, current_job);
             }
 
+            // Bookkeeping for all queued jobs this tick, then sort the ready queue.
+            update_queue_bookkeeping(io_q, ready_q);
+
             // Step 1: Add newly arriving jobs to the ready queue.
             pointer = add_jobs(clock, pointer, num_jobs, jobs, ready_q); 
             TRACE_LOG("[TRACE t=%d] add_jobs pointer=%d\n", clock, pointer);
@@ -98,7 +101,9 @@ int main(){
             wake_io(io_q, ready_q);
 
             // re-sort after adding new jobs and those done with I/O
-            ready_q->head = merge_sort(ready_q->head, algorithm);
+            if(ready_q->head != NULL && ready_q->head->next != NULL && algorithm != RR){
+                ready_q->head = merge_sort(ready_q->head, algorithm);
+            }
 
             if(current_job == NULL){ // check that there's a running job
                 break;
@@ -116,8 +121,9 @@ int main(){
                 // Switch status back to ready -> this will trigger the break after the bookkeeping
                 current_job->status = READY;
                 enqueue(ready_q, current_job);
-                current_job = NULL;
                 trace_job_state("PREEMPTED", clock, current_job);
+                current_job = NULL;
+
              } else{
                 // Step 5: If the job requests I/O, move it to the I/O queue.
                 if (IO_request()){
@@ -129,9 +135,6 @@ int main(){
                     trace_job_state("move current job to io queue due to IO request", clock, current_job);
                 }
              }
-
-            // Bookkeeping for all queued jobs this tick, then sort the ready queue.
-            update_queue_bookkeeping(io_q, ready_q, algorithm);
 
             if (current_job == NULL || current_job->status != RUNNING){
                 trace_job_state("Current Job is not running, breaking loop", clock, current_job);

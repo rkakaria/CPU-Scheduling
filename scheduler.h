@@ -27,6 +27,6 @@ void wake_io(queue_t* io_q, queue_t* ready_q);
 
 bool preemption(algorithm_t algorithm, queue_t* ready_q, job_t* current_job);
 
-void update_queue_bookkeeping(queue_t* io_q, queue_t* ready_q, algorithm_t algorithm);
+void update_queue_bookkeeping(queue_t* io_q, queue_t* ready_q);
 
 #endif
