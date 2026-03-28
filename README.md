@@ -44,8 +44,11 @@ Additional assumptions:
 - The arrival time of jobs is >= 0.
 - The service time of jobs is > 0.
 - The number of total arriving jobs is >= 0.
+- There are no duplicate PIDs.
+- All lines in the input file are in the ```Process Id:Arrival time:Service time:Priority``` format, with no header line.
 
 ### Test Cases
+In order to assess the correct implementation of preemption for the shortest jot first and multilevel feedback queue algorithms, we tested our program both with and without the possibility of jobs entering an I/O burst. This included varying number of jobs, arrival times, service times, and priorities. Several test input files are included in the folder ```test_cases```.
 
 ### Results
 
