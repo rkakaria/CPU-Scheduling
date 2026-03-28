@@ -209,3 +209,22 @@ void wake_io(queue_t* io_q, queue_t* ready_q){
         }
     }
 }
+
+// check for preemption
+bool preemption(algorithm_t algorithm, queue_t* ready_q, job_t* current_job){
+    if(ready_q->elements <= 0){
+        return false;
+    }
+
+    if(algorithm == SJF){
+        job_t* shortest = ready_q->head->data;
+
+        if((shortest->remaining_time < current_job->remaining_time) || (shortest->remaining_time == current_job->remaining_time && shortest->pid < current_job->pid)){ // if there is a higher priority job
+            return true;
+        }
+    } else if(algorithm == MLFQ){
+        return true;
+    }
+
+    return false;
+}

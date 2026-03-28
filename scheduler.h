@@ -25,4 +25,6 @@ int add_jobs(int clock, int pointer, int num_jobs, job_t** jobs, queue_t* ready_
 
 void wake_io(queue_t* io_q, queue_t* ready_q);
 
+bool preemption(algorithm_t algorithm, queue_t* ready_q, job_t* current_job);
+
 #endif

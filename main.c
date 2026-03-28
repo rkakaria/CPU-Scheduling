@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <stdbool.h>
-#include <stdio.h> // remove
 #include "queue.h"
 #include "sort.h"
 #include "scheduler.h"
@@ -22,14 +21,13 @@ int main(){
     at t0 */
     queue_t* ready_q = create_queue();
     pointer = add_jobs(clock, pointer, num_jobs, jobs, ready_q);
+    ready_q->head = merge_sort(ready_q->head, algorithm); // sort for the given algorithm
 
     queue_t* io_q = create_queue(); // queue for jobs sleeping on io
 
     /* Main coordinator loop. Runs as long as there are jobs
     that have not yet completed. */
     while(complete_jobs < num_jobs){ 
-
-        ready_q->head = merge_sort(ready_q->head, SJF); // sort ready queue by time remaining for sjf
         job_t* current_job = dequeue(ready_q);
 
         if(current_job != NULL){
@@ -42,7 +40,7 @@ int main(){
             ready queue while the current job is running such that
             they can preempt at the end of the iteration if
             necessary. */
-            clock++;
+            clock++;          
 
             /* Bookkeeping and statistics:
             Update total time for all incomplete jobs.
@@ -65,30 +63,23 @@ int main(){
             // check for jobs completing I/O
             wake_io(io_q, ready_q);
 
-            // re-sort after adding jobs done with I/O
+            // re-sort after adding new jobs and those done with I/O
             ready_q->head = merge_sort(ready_q->head, algorithm);
 
             if(current_job == NULL){ // check that there's a running job
                 break;
             }
             
-            // current_job->status = RUNNING;
             current_job->remaining_time--;
             current_job->cpu_time++;
 
             if(current_job->remaining_time <= 0){ // if job has finished
                 current_job->status = TERMINATED; 
                 complete_jobs++;
-            } else if(ready_q->elements > 0){ // if there are other ready jobs
-                job_t* shortest = ready_q->head->data;
-
-                if((shortest->remaining_time < current_job->remaining_time) || (shortest->remaining_time == current_job->remaining_time && shortest->pid < current_job->pid)){ // if there is a higher priority job
-                    current_job->status = READY; // mark current_job as swapped out (preempted)
-                    enqueue(ready_q, current_job);
-                }
-            } 
-            
-            if(IO_request() == 1 && current_job->status == RUNNING){ // check for I/O request from running current_job
+            } else if(preemption(algorithm, ready_q, current_job)){ // if job is preempted
+                current_job->status = READY;
+                enqueue(ready_q, current_job);
+            } else if(IO_request() == 1){ // check for I/O request from running current_job
                 current_job->status = WAITING; 
                 enqueue(io_q, current_job);
             } 
