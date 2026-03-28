@@ -6,7 +6,7 @@
 #define CHANCE_OF_IO_REQUEST 6
 #define CHANCE_OF_IO_COMPLETE 4
 
-#define INPUT_FILE "test_cases/test_input_2.txt"
+#define INPUT_FILE "input_file.txt"
 
 // ask user for which algorithm to run
 algorithm_t input(){
@@ -147,7 +147,6 @@ int os_rand(){
 }
 
 int IO_request(){ 
-    return 0;
     if(os_rand() % CHANCE_OF_IO_REQUEST == 0 ){
         return 1;
     } else {
