@@ -48,12 +48,14 @@ static void trace_job_state(const char* event, int clock, job_t* job){
 }
 
 int main(){
-    // int selection = input();
-    job_t** jobs = parse(); // Array to store all jobs, sorted by arrival time.
-    int num_jobs = number_jobs(); // Total number of jobs.
-    int complete_jobs = 0; // Number of completed jobs.
-    int pointer = 0; // Tracks which jobs in the array have arrived.
-    int clock = 0; // Simulation clock.
+
+    algorithm_t algorithm = input();
+
+    job_t** jobs = parse(); // array to store all jobs, sorted by arrival time
+    int num_jobs = number_jobs(); // number of total jobs
+    int complete_jobs = 0; // number of completed jobs
+    int pointer = 0; // track which jobs in the jobs array have arrived
+    int clock = 0; // initialize clock
     
     os_srand(1); // Seed the random number generator.
     TRACE_LOG("[TRACE t=%d] scheduler_start num_jobs=%d\n", clock, num_jobs);
@@ -61,33 +63,44 @@ int main(){
     // Initialize the ready queue with jobs that have arrived at t=0.
     queue_t* ready_q = create_queue();
     pointer = add_jobs(clock, pointer, num_jobs, jobs, ready_q);
-    TRACE_LOG("[TRACE t=%d] initial_arrivals pointer=%d\n", clock, pointer);
+    ready_q->head = merge_sort(ready_q->head, algorithm); // sort for the given algorithm
 
-    queue_t* io_q = create_queue(); // Queue for jobs waiting on I/O.
-    job_t* current_job = NULL;
-    
+    queue_t* io_q = create_queue(); // queue for jobs sleeping on io
 
+    /* Main coordinator loop. Runs as long as there are jobs
+    that have not yet completed. */
     while(complete_jobs < num_jobs){ 
+        job_t* current_job = dequeue(ready_q);
 
-        if (ready_q->elements > 0){
-            current_job = dequeue(ready_q);
+        if(current_job != NULL){
             current_job->status = RUNNING;
-            trace_job_state("Current Job set to: %d", clock, current_job);
         }
+        
+        while(true){ // main process management loop 
+            /* Clock increments at beginning of iteration 
+            so that jobs arriving at t = clock are added to the 
+            ready queue while the current job is running such that
+            they can preempt at the end of the iteration if
+            necessary. */
+            clock++;          
 
-        while(true){ // Main process management loop.
-            clock++;
-            bool preemption = false; // Placeholder for preemption.
-
-            if (current_job != NULL){
-                current_job->cpu_time++;
-                current_job->remaining_time--;
-                trace_job_state("tick", clock, current_job);
+            /* Bookkeeping and statistics:
+            Update total time for all incomplete jobs.
+            Update ready time for all ready jobs.
+            I/O time is updated via the wake_io function. Updates times based
+            on the status each job has at the beginning of the iteration. */ 
+            for(int i = 0; i < num_jobs; i++){
+                if(jobs[i]->status != TERMINATED && jobs[i]->status != NEW){
+                    jobs[i]->total_time++;
+                }
+                if(jobs[i]->status == READY){
+                    jobs[i]->ready_time++;
+                }
             }
 
-            // Step 1: Add newly arriving jobs to the ready queue.
-            pointer = add_jobs(clock, pointer, num_jobs, jobs, ready_q); 
-            TRACE_LOG("[TRACE t=%d] add_jobs pointer=%d\n", clock, pointer);
+            /* Add new incoming jobs to the ready queue, which will start
+            being processed during the next iteration */ 
+            pointer = add_jobs(clock, pointer, num_jobs, jobs, ready_q);   
 
 
             // Step 2: Move jobs that finished I/O from wait queue to ready queue.
@@ -132,24 +145,41 @@ int main(){
                 }
              }
 
-            // Bookkeeping for all queued jobs this tick, then sort the ready queue.
-            update_queue_bookkeeping(io_q, ready_q, schedule);
+            // re-sort after adding new jobs and those done with I/O
+            ready_q->head = merge_sort(ready_q->head, algorithm);
 
-            if (current_job == NULL || current_job->status != RUNNING){
-                trace_job_state("Current Job is not running, breaking loop", clock, current_job);
+            if(current_job == NULL){ // check that there's a running job
                 break;
-             }
+            }
+            
+            current_job->remaining_time--;
+            current_job->cpu_time++;
 
-        } // End main process management loop.
-    } // End simulation loop when all jobs are completed.
-   
-    // Sort jobs by PID and display statistics.
+            if(current_job->remaining_time <= 0){ // if job has finished
+                current_job->status = TERMINATED; 
+                complete_jobs++;
+            } else if(preemption(algorithm, ready_q, current_job)){ // if job is preempted
+                current_job->status = READY;
+                enqueue(ready_q, current_job);
+            } else if(IO_request() == 1){ // check for I/O request from running current_job
+                current_job->status = WAITING; 
+                enqueue(io_q, current_job);
+            } 
+            
+            // if current job has been swapped out
+            if(current_job->status != RUNNING){
+                break;
+            }
+        }
+    }
+
+    // sort jobs by pid and display statistics
     qsort(jobs, num_jobs, sizeof(jobs[0]), comp_pid);
 
     print_header();
     print_data(clock, jobs, num_jobs);
-
-    // Free allocated memory.
+   
+    // free memory
     for(int i = 0; i < num_jobs; i++){
         free(jobs[i]);
         jobs[i] = NULL;

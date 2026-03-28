@@ -64,23 +64,16 @@ job_t* dequeue(queue_t* queue){
     }
 }
 
-void display_queue(queue_t* q){
-    node_t* head = q->head;
-
-    while(head != NULL){
-        printf("Node %d, Arrival Time %d, Remaining Time %d, Priority %d\n", head->data->pid, head->data->arrival_time, head->data->remaining_time, head->data->priority);
-        head = head->next;
-    }
-}
-
+/* Function to free the queue nodes and the queue.
+Data held by the nodes is freed elsewhere (by freeing
+the jobs array at the end of the loop in main.c.) */
 void destroy_queue(queue_t* queue){
     if (queue == NULL){
         return;
     }
-    
-    // node->data is destroyed by freeing the jobs array
+
     node_t* head = queue->head;
-    while (head != NULL){    
+    while (head != NULL){
         node_t* temp = head;
         head = head->next;
 

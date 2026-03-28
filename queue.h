@@ -3,8 +3,7 @@
 
 typedef enum process_state {
     NEW, READY, RUNNING, WAITING, TERMINATED
-} process_state;
-
+} state_t;
 
 typedef struct job{
     // from input file
@@ -18,7 +17,7 @@ typedef struct job{
     int cpu_time; // time spent on CPU
     int total_time; // total time spent in system
     int remaining_time;
-    process_state status;
+    state_t status;
 } job_t;
 
 typedef struct node{
