@@ -4,48 +4,6 @@
 #include "sort.h"
 #include "scheduler.h"
 #include "display.h"
-#include <stdio.h>
-
-#ifndef TRACE
-#define TRACE 1
-#endif
-
-#if TRACE
-#define TRACE_LOG(...) do { fprintf(stderr, __VA_ARGS__); } while (0)
-#else
-#define TRACE_LOG(...) do { } while (0)
-#endif
-
-algorithm_t schedule = SJF;
-
-static const char* status_to_string(process_state status){
-    switch(status){
-        case NEW: return "NEW";
-        case READY: return "READY";
-        case RUNNING: return "RUNNING";
-        case WAITING: return "WAITING";
-        case TERMINATED: return "TERMINATED";
-        default: return "UNKNOWN";
-    }
-}
-
-static void trace_job_state(const char* event, int clock, job_t* job){
-    if(job == NULL){
-        TRACE_LOG("[TRACE t=%d] %s job=NULL\n", clock, event);
-        return;
-    }
-
-    TRACE_LOG(
-        "[TRACE t=%d] %s pid=%d status=%s remaining=%d cpu=%d arrival=%d\n",
-        clock,
-        event,
-        job->pid,
-        status_to_string(job->status),
-        job->remaining_time,
-        job->cpu_time,
-        job->arrival_time
-    );
-}
 
 int main(){
 
@@ -57,10 +15,10 @@ int main(){
     int pointer = 0; // track which jobs in the jobs array have arrived
     int clock = 0; // initialize clock
     
-    os_srand(1); // Seed the random number generator.
-    TRACE_LOG("[TRACE t=%d] scheduler_start num_jobs=%d\n", clock, num_jobs);
+    os_srand(1); // seed the random number generator
    
-    // Initialize the ready queue with jobs that have arrived at t=0.
+    /* Initialize ready queue with jobs that have arrived
+    at t0 */
     queue_t* ready_q = create_queue();
     pointer = add_jobs(clock, pointer, num_jobs, jobs, ready_q);
     ready_q->head = merge_sort(ready_q->head, algorithm); // sort for the given algorithm
@@ -102,48 +60,8 @@ int main(){
             being processed during the next iteration */ 
             pointer = add_jobs(clock, pointer, num_jobs, jobs, ready_q);   
 
-
-            // Step 2: Move jobs that finished I/O from wait queue to ready queue.
+            // check for jobs completing I/O
             wake_io(io_q, ready_q);
-            TRACE_LOG("[TRACE t=%d] wake_io_checked\n", clock);
-
-            // If there is no active job, update bookkeeping and break.
-            if (current_job == NULL || current_job->status == TERMINATED){
-                update_queue_bookkeeping(io_q, ready_q, schedule);
-                trace_job_state("break_null_or_terminated", clock, current_job);
-                break;
-             }
-
-             if (current_job -> remaining_time == 0){
-                // Step 3a: If the current job is complete, mark it terminated and update stats.
-                // Update stats.
-                current_job->total_time = clock - current_job->arrival_time;
-
-                // Update state to terminated.
-                current_job->status = TERMINATED;
-                trace_job_state("job_terminated", clock, current_job);
-
-                // Increment the number of completed jobs.
-                complete_jobs++;
-                TRACE_LOG("[TRACE t=%d] complete_jobs=%d/%d\n", clock, complete_jobs, num_jobs);
-
-             } else if (preemption){
-                // Step 4: If the current job is preempted, move it back to ready.
-                // Switch status back to ready -> this will trigger the break after the bookkeeping
-                current_job->status = READY;
-                // Add back to ready queue.
-                enqueue(ready_q, current_job);
-                trace_job_state("job_preempted", clock, current_job);
-             } else{
-                // Step 5: If the job requests I/O, move it to the I/O queue.
-                if (IO_request()){
-                    // Mark as waiting on I/O.
-                    current_job->status = WAITING;
-                    // Add to I/O queue.
-                    enqueue(io_q, current_job);
-                    trace_job_state("move current job to io queue due to IO request", clock, current_job);
-                }
-             }
 
             // re-sort after adding new jobs and those done with I/O
             ready_q->head = merge_sort(ready_q->head, algorithm);
