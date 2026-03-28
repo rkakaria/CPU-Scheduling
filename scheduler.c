@@ -4,7 +4,7 @@
 #include "scheduler.h"
 #include "sort.h"
 
-#define INPUT_FILE "tests/RR/time_quant_check.txt"
+#define INPUT_FILE "input_file.txt"
 
 // ask user for which algorithm to run
 int input(){
