@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include "scheduler.h"
+#include "sort.h"
 
 #define CHANCE_OF_IO_REQUEST 6
 #define CHANCE_OF_IO_COMPLETE 4
