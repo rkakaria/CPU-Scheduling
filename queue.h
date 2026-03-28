@@ -16,6 +16,7 @@ typedef struct job{
     int ready_time;
     int total_time;
     int remaining_time;
+    int time_quantum; // RR, when time_quantum is 0, preemption occurs
     int cpu_time;
     state_t status;
 } job_t;

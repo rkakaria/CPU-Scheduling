@@ -6,6 +6,8 @@
 #define CHANCE_OF_IO_REQUEST 6
 #define CHANCE_OF_IO_COMPLETE 4
 
+#define INPUT_FILE "test_cases/test_input_2.txt"
+
 // ask user for which algorithm to run
 algorithm_t input(){
     int schedule = 0;
@@ -66,7 +68,7 @@ int comp_pid(const void*a, const void* b){
 
 // calculate number of jobs in input file
 int number_jobs(){
-    FILE* fptr = fopen("input_file.txt", "r");
+    FILE* fptr = fopen(INPUT_FILE, "r");
 
     int pid;
     int arrival;
@@ -86,7 +88,7 @@ int number_jobs(){
 
 // create array of jobs from input file
 job_t** parse(){
-    FILE* fptr = fopen("input_file.txt", "r");
+    FILE* fptr = fopen(INPUT_FILE, "r");
 
     int pid;
     int arrival;
@@ -94,7 +96,6 @@ job_t** parse(){
     int priority;
 
     int num = number_jobs();
-
     // malloc array of jobs
     job_t** jobs = (job_t**)malloc(sizeof(job_t*)*num);
 
@@ -146,6 +147,7 @@ int os_rand(){
 }
 
 int IO_request(){ 
+    return 0;
     if(os_rand() % CHANCE_OF_IO_REQUEST == 0 ){
         return 1;
     } else {
@@ -185,9 +187,7 @@ void wake_io(queue_t* io_q, queue_t* ready_q){
     node_t* temp = io_q->head;
     node_t* prev;
 
-    while(temp != NULL){ 
-        temp->data->io_time++;
-        
+    while(temp != NULL){         
         if(IO_complete() == 1){
             // extract the node with the job that has completed io
             if(temp == io_q->head){ 
@@ -210,6 +210,27 @@ void wake_io(queue_t* io_q, queue_t* ready_q){
     }
 }
 
+void update_queue_bookkeeping(queue_t* io_q, queue_t* ready_q){
+    node_t* temp = NULL;
+
+    if(io_q != NULL){
+        temp = io_q->head;
+        while(temp != NULL){
+            temp->data->io_time++;
+            temp = temp->next;
+        }
+    }
+
+    
+    if(ready_q != NULL){
+        temp = ready_q->head;
+        while(temp != NULL){
+            temp->data->ready_time++;
+            temp = temp->next;
+        }
+    }
+}
+
 // check for preemption
 bool preemption(algorithm_t algorithm, queue_t* ready_q, job_t* current_job){
     if(ready_q->elements <= 0){
@@ -224,7 +245,8 @@ bool preemption(algorithm_t algorithm, queue_t* ready_q, job_t* current_job){
         }
     } else if(algorithm == MLFQ){
         return true;
+    } else if(algorithm == RR){
+        return (current_job->time_quantum == 0);
     }
-
     return false;
 }

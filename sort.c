@@ -168,7 +168,7 @@ node_t* merge_sort(node_t* head, algorithm_t schedule){
         return merge_sjf(left, right);
     } else if(schedule == MLFQ){ // sort by priority
         return merge_mlfq(left, right);
-    } else { // sort by arrival time
+    }else { // sort by arrival time
         return merge(left, right);
     }
 }
