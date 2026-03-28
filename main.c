@@ -16,7 +16,8 @@
 #define TRACE_LOG(...) do { } while (0)
 #endif
 
-algorithm_t schedule = SJF;
+algorithm_t schedule = RR;
+#define TIME_QUANTUM 5
 
 static const char* status_to_string(process_state status){
     switch(status){
@@ -47,13 +48,26 @@ static void trace_job_state(const char* event, int clock, job_t* job){
     );
 }
 
+bool preemption_rr(job_t* current_job){
+    return (current_job->time_quantum == 0); // we are preempting for the next tick
+}
+
 int main(){
     // int selection = input();
     job_t** jobs = parse(); // Array to store all jobs, sorted by arrival time.
+    printf("Jobs parsed:\n");
     int num_jobs = number_jobs(); // Total number of jobs.
     int complete_jobs = 0; // Number of completed jobs.
     int pointer = 0; // Tracks which jobs in the array have arrived.
     int clock = 0; // Simulation clock.
+
+    // Define Preemption Function
+    bool (*preemption)(job_t*) = NULL;
+    if (schedule == RR){
+        preemption = preemption_rr;
+    }else if (schedule == SJF){
+    }else if (schedule == MLFQ){
+    }
     
     os_srand(1); // Seed the random number generator.
     TRACE_LOG("[TRACE t=%d] scheduler_start num_jobs=%d\n", clock, num_jobs);
@@ -72,17 +86,18 @@ int main(){
         if (ready_q->elements > 0){
             current_job = dequeue(ready_q);
             current_job->status = RUNNING;
+            current_job->time_quantum = TIME_QUANTUM;
             trace_job_state("Current Job set to: %d", clock, current_job);
         }
 
         while(true){ // Main process management loop.
             clock++;
-            bool preemption = false; // Placeholder for preemption.
 
             if (current_job != NULL){
                 current_job->cpu_time++;
                 current_job->remaining_time--;
-                trace_job_state("tick", clock, current_job);
+                current_job->time_quantum--;
+                trace_job_state("TICK", clock, current_job);
             }
 
             // Step 1: Add newly arriving jobs to the ready queue.
@@ -114,13 +129,13 @@ int main(){
                 complete_jobs++;
                 TRACE_LOG("[TRACE t=%d] complete_jobs=%d/%d\n", clock, complete_jobs, num_jobs);
 
-             } else if (preemption){
+             } else if (preemption(current_job)){
                 // Step 4: If the current job is preempted, move it back to ready.
                 // Switch status back to ready -> this will trigger the break after the bookkeeping
                 current_job->status = READY;
                 // Add back to ready queue.
                 enqueue(ready_q, current_job);
-                trace_job_state("job_preempted", clock, current_job);
+                trace_job_state("PREEMPTED", clock, current_job);
              } else{
                 // Step 5: If the job requests I/O, move it to the I/O queue.
                 if (IO_request()){
@@ -133,7 +148,9 @@ int main(){
              }
 
             // Bookkeeping for all queued jobs this tick, then sort the ready queue.
-            update_queue_bookkeeping(io_q, ready_q, schedule);
+            if (complete_jobs < num_jobs){
+                update_queue_bookkeeping(io_q, ready_q, schedule);
+            }
 
             if (current_job == NULL || current_job->status != RUNNING){
                 trace_job_state("Current Job is not running, breaking loop", clock, current_job);

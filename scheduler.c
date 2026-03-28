@@ -4,6 +4,8 @@
 #include "scheduler.h"
 #include "sort.h"
 
+#define INPUT_FILE "tests/RR/time_quant_check.txt"
+
 // ask user for which algorithm to run
 int input(){
     int schedule = 0;
@@ -58,7 +60,7 @@ int comp_pid(const void*a, const void* b){
 
 // calculate number of lines in input file
 int number_jobs(){
-    FILE* fptr = fopen("input_file.txt", "r");
+    FILE* fptr = fopen(INPUT_FILE, "r");
 
     int pid;
     int arrival;
@@ -78,7 +80,7 @@ int number_jobs(){
 
 // create array of jobs from input file
 job_t** parse(){
-    FILE* fptr = fopen("input_file.txt", "r");
+    FILE* fptr = fopen(INPUT_FILE, "r");
 
     int pid;
     int arrival;
@@ -86,15 +88,13 @@ job_t** parse(){
     int priority;
 
     int num = number_jobs();
-
     // malloc array of jobs
     job_t** jobs = (job_t**)malloc(sizeof(job_t*)*num);
-    
+
     // initialize all job_ts and put them in the array by parsing input
     int counter = 0;
     while (fscanf(fptr, "%d:%d:%d:%d", &pid, &arrival, &service, &priority) == 4) {
         job_t* job = (job_t*)malloc(sizeof(job_t));
-
         job->pid = pid;
         job->arrival_time = arrival;
         job->runtime = service;
@@ -206,6 +206,7 @@ void update_queue_bookkeeping(queue_t* io_q, queue_t* ready_q, algorithm_t sched
         }
     }
 
+    
     if(ready_q != NULL){
         temp = ready_q->head;
         while(temp != NULL){
@@ -213,7 +214,7 @@ void update_queue_bookkeeping(queue_t* io_q, queue_t* ready_q, algorithm_t sched
             temp = temp->next;
         }
 
-        if(ready_q->head != NULL && ready_q->head->next != NULL){
+        if(ready_q->head != NULL && ready_q->head->next != NULL && schedule != RR){
             ready_q->head = merge_sort(ready_q->head, schedule);
         }
     }
