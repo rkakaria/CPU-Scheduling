@@ -2,21 +2,23 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include "scheduler.h"
-#include "sort.h"
 
-#define INPUT_FILE "input_file.txt"
+#define CHANCE_OF_IO_REQUEST 6
+#define CHANCE_OF_IO_COMPLETE 4
+
+#define INPUT_FILE "test_cases/test_input_4.txt"
 
 // ask user for which algorithm to run
-int input(){
+algorithm_t input(){
     int schedule = 0;
     char buff[20];
 
     while(true){
 		printf("Enter 1 for Preemptive Shortest Job First\nEnter 2 for Round Robin\nEnter 3 for Multi-Level Feedback Queue\n");
-		char* input = fgets(buff, 5, stdin);
+		char* input = fgets(buff, 10, stdin);
 		schedule = strtol(buff, NULL, 10);
 		if(input != NULL && (schedule < 1 || schedule > 3)){
-            printf("Selection must be 1, 2, or 3.");
+            printf("Selection must be 1, 2, or 3.\n");
         }
 		else if(input != NULL && schedule != 0){
 			break;
@@ -25,7 +27,13 @@ int input(){
 		}
 	}
 
-    return schedule;
+    if(schedule == 1){
+        return SJF;
+    } else if(schedule == 2){
+        return RR;
+    } else{
+        return MLFQ;
+    }
 }
 
 // function to sort jobs array by arrival time
@@ -58,7 +66,7 @@ int comp_pid(const void*a, const void* b){
     }
 }
 
-// calculate number of lines in input file
+// calculate number of jobs in input file
 int number_jobs(){
     FILE* fptr = fopen(INPUT_FILE, "r");
 
@@ -67,7 +75,7 @@ int number_jobs(){
     int service;
     int priority;
 
-    // get number of jobs by counting lines in input file
+    // count number of lines
     int num = 0;
     while (fscanf(fptr, "%d:%d:%d:%d", &pid, &arrival, &service, &priority) == 4) {
        num++;
@@ -91,10 +99,19 @@ job_t** parse(){
     // malloc array of jobs
     job_t** jobs = (job_t**)malloc(sizeof(job_t*)*num);
 
+    if(jobs == NULL){
+        return NULL;
+    }
+    
     // initialize all job_ts and put them in the array by parsing input
     int counter = 0;
     while (fscanf(fptr, "%d:%d:%d:%d", &pid, &arrival, &service, &priority) == 4) {
         job_t* job = (job_t*)malloc(sizeof(job_t));
+        
+        if(job == NULL){
+            return NULL;
+        }
+
         job->pid = pid;
         job->arrival_time = arrival;
         job->runtime = service;
@@ -105,6 +122,7 @@ job_t** parse(){
         job->io_time = 0;
         job->ready_time = 0;
         job->total_time = 0;
+        job->cpu_time = 0;
 
         jobs[counter] = job;
         counter++;
@@ -123,15 +141,13 @@ void os_srand(int seed){
     srand(seed);
 }
 
-#define CHANCE_OF_IO_REQUEST 10
-#define CHANCE_OF_IO_COMPLETE 4
-
 // rand wrapper
 int os_rand(){ 
     return rand();
 }
 
 int IO_request(){ 
+    // return 0;
     if(os_rand() % CHANCE_OF_IO_REQUEST == 0 ){
         return 1;
     } else {
@@ -147,6 +163,7 @@ int IO_complete(){
     }
 }
 
+// add newly arriving jobs to ready queue
 int add_jobs(int clock, int pointer, int num_jobs, job_t** jobs, queue_t* ready_q){
     for(int i = pointer; i < num_jobs; i++){
         if(jobs[i]->arrival_time > clock){
@@ -158,13 +175,14 @@ int add_jobs(int clock, int pointer, int num_jobs, job_t** jobs, queue_t* ready_
             pointer = num_jobs;
         }
 
-        jobs[i]->status = READY ; // status as ready
+        jobs[i]->status = READY; // status as ready
         enqueue(ready_q, jobs[i]);
     }
 
     return pointer;
 }
 
+// check all IO jobs for completion of IO
 void wake_io(queue_t* io_q, queue_t* ready_q){
     node_t* temp = io_q->head;
     node_t* prev;
@@ -173,16 +191,15 @@ void wake_io(queue_t* io_q, queue_t* ready_q){
         temp->data->io_time++;
         
         if(IO_complete() == 1){
-            // printf("Job %d io is complete\n", temp->data->pid);
             // extract the node with the job that has completed io
             if(temp == io_q->head){ 
                 temp = temp->next;
                 job_t* head_job = dequeue(io_q);
-                head_job->status = 1;
+                head_job->status = READY;
                 enqueue(ready_q, head_job);
             } else {
                 prev->next = temp->next;
-                temp->data->status = 1;
+                temp->data->status = READY;
                 enqueue(ready_q, temp->data);
                 free(temp);
                 temp = prev->next;
@@ -218,4 +235,24 @@ void update_queue_bookkeeping(queue_t* io_q, queue_t* ready_q, algorithm_t sched
             ready_q->head = merge_sort(ready_q->head, schedule);
         }
     }
+}
+
+// check for preemption
+bool preemption(algorithm_t algorithm, queue_t* ready_q, job_t* current_job){
+    if(ready_q->elements <= 0){
+        return false;
+    }
+
+    if(algorithm == SJF){
+        job_t* shortest = ready_q->head->data;
+
+        if((shortest->remaining_time < current_job->remaining_time) || (shortest->remaining_time == current_job->remaining_time && shortest->pid < current_job->pid)){ // if there is a higher priority job
+            return true;
+        }
+    } else if(algorithm == MLFQ){
+        return true;
+    } else if(algorithm == RR){
+        return (current_job->time_quantum == 0);
+    }
+    return false;
 }

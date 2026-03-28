@@ -58,17 +58,10 @@ All group members:
 - Brainstorming and approach conception
 - Test cases
 
-Jonas:
-- Multilevel Feedback Scheduling
-    
-Reva:
-- Preemptive Shortest Job First Scheduling
-- Queue and job definitions/functions
-- Queue sorting and program input/output implementation
-- Readme
-
-Nikhil
-- Round Robin Scheduling
-- Main loop logic, structure, and generalization
+| Member | Focus |
+|--------|--------|
+| Jonas | Multilevel feedback scheduling |
+| Reva | Preemptive SJF; queue and job types; sorting; I/O and parsing glue; README |
+| Nikhil | Round robin; main loop structure and shared scheduling flow |
 
 All group members built upon each others' work and actively worked together to create an approach and logic to apply towards each scheduling algorithm.

@@ -5,7 +5,7 @@
 
 void os_srand(int seed);
 
-int input();
+algorithm_t input();
 
 int comp(const void* a, const void* b);
 
@@ -25,7 +25,8 @@ int add_jobs(int clock, int pointer, int num_jobs, job_t** jobs, queue_t* ready_
 
 void wake_io(queue_t* io_q, queue_t* ready_q);
 
-void update_queue_bookkeeping(queue_t* io_q, queue_t* ready_q, algorithm_t schedule);
+bool preemption(algorithm_t algorithm, queue_t* ready_q, job_t* current_job);
 
+void update_queue_bookkeeping(queue_t* io_q, queue_t* ready_q, algorithm_t algorithm);
 
 #endif

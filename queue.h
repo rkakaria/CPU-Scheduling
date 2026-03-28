@@ -3,8 +3,7 @@
 
 typedef enum process_state {
     NEW, READY, RUNNING, WAITING, TERMINATED
-} process_state;
-
+} state_t;
 
 typedef struct job{
     // from input file
@@ -13,13 +12,13 @@ typedef struct job{
     int runtime;
     int priority;
     // other attributes
-    int io_time; // time spent on I/O
-    int ready_time; // time spent in ready queue
-    int cpu_time; // time spent on CPU
-    int total_time; // total time spent in system
+    int io_time;
+    int ready_time;
+    int total_time;
     int remaining_time;
     int time_quantum; // RR, when time_quantum is 0, preemption occurs
-    process_state status;
+    int cpu_time;
+    state_t status;
 } job_t;
 
 typedef struct node{
