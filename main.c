@@ -17,6 +17,8 @@
 #endif
 
 #define TIME_QUANTUM 5
+#define MLFQ_BOOST_INTERVAL 25
+
 
 static const char* status_to_string(state_t status){
     switch(status){
@@ -87,6 +89,7 @@ int main(){
                 current_job->cpu_time++;
                 current_job->remaining_time--;
                 current_job->time_quantum--;
+                current_job->time_slice_used++;
                 trace_job_state("TICK", clock, current_job);
             }
 
@@ -135,6 +138,16 @@ int main(){
                     trace_job_state("move current job to io queue due to IO request", clock, current_job);
                 }
              }
+            
+            if (algorithm == MLFQ && clock % MLFQ_BOOST_INTERVAL == 0 && clock != 0){
+                for (int i = 0; i < num_jobs; i++) {
+                    if (jobs[i]->status != TERMINATED) {
+                        jobs[i]->priority = 0;
+                        jobs[i]->time_slice_used = 0;
+                    }
+                }
+                TRACE_LOG("[TRACE t=%d] MLFQ boost: all priorities set to 0\n", clock);
+            }
 
             if (current_job == NULL || current_job->status != RUNNING){
                 trace_job_state("Current Job is not running, breaking loop", clock, current_job);

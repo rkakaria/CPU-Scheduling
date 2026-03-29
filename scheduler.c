@@ -6,6 +6,11 @@
 #define CHANCE_OF_IO_REQUEST 6
 #define CHANCE_OF_IO_COMPLETE 4
 
+
+#define MLFQ_MAX_PRIORITY 2  
+#define MLFQ_TIME_SLICE 2
+#define MLFQ_BOOST_INTERVAL 25
+
 #define INPUT_FILE "input_file.txt"
 
 // ask user for which algorithm to run
@@ -123,6 +128,7 @@ job_t** parse(){
         job->ready_time = 0;
         job->total_time = 0;
         job->cpu_time = 0;
+        job->time_slice_used = 0;
 
         jobs[counter] = job;
         counter++;
@@ -193,10 +199,12 @@ void wake_io(queue_t* io_q, queue_t* ready_q){
                 temp = temp->next;
                 job_t* head_job = dequeue(io_q);
                 head_job->status = READY;
+                head_job->time_slice_used = 0;
                 enqueue(ready_q, head_job);
             } else {
                 prev->next = temp->next;
                 temp->data->status = READY;
+                temp->data->time_slice_used = 0;
                 enqueue(ready_q, temp->data);
                 free(temp);
                 temp = prev->next;
@@ -242,8 +250,28 @@ bool preemption(algorithm_t algorithm, queue_t* ready_q, job_t* current_job){
         if((shortest->remaining_time < current_job->remaining_time) || (shortest->remaining_time == current_job->remaining_time && shortest->pid < current_job->pid)){ // if there is a higher priority job
             return true;
         }
+
     } else if(algorithm == MLFQ){
-        return true;
+        
+        if(current_job->time_slice_used >= MLFQ_TIME_SLICE){
+            if(current_job->priority < MLFQ_MAX_PRIORITY){
+                current_job->priority++ ;
+            }
+            current_job->time_slice_used = 0;
+            return true;
+        }
+
+        // if a higher priority job is waiting, prempt
+        if(ready_q->elements> 0){
+            job_t* head = ready_q->head->data;
+            if(head->priority < current_job->priority){
+                return true;
+            }
+        }
+        return false;
+
+
+
     } else if(algorithm == RR){
         return (current_job->time_quantum == 0);
     }
