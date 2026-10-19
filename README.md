@@ -8,10 +8,10 @@ Jonas Bartels, Reva Kakaria, Nikhil Trivedi
 This project implements preemptive shortest job first, round robin, and multi-level feedback scheduling, based on the provided specifications and pseudocode. 
 
 ### Code files
-<u>Queue.h/Queue.c</u>: Implements queue structure and functions as a singly-linked list. Also defines a job struct.<br>
-<u>Scheduler.h/Scheduler.c</u>: Implements scheduling functions such as initializing jobs from input file, checking for IO, and adding newly ready jobs to the ready queue.<br>
-<u>Sort.h/Sort.c</u>: Implements merge sorting of a queue of jobs based on various attributes of a job (i.e. arrival time, remaining time, etc.).<br>
-<u>Display.h/Display.c</u>: Implements the output formatting
+```Queue.h/Queue.c``` Implements queue structure and functions as a singly-linked list. Also defines a job struct.<br>
+```Scheduler.h/Scheduler.c``` Implements scheduling functions such as initializing jobs from input file, checking for IO, and adding newly ready jobs to the ready queue.<br>
+```Sort.h/Sort.c```: Implements merge sorting of a queue of jobs based on various attributes of a job (i.e. arrival time, remaining time, etc.).<br>
+```Display.h/Display.c```: Implements the output formatting
 
 ### How to Compile and Test
 
