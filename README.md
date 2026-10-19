@@ -1,28 +1,33 @@
-## Computer Systems Project 3: Scheduling
+# Computer Systems Project 3: Scheduling
 
-Group 1
-<br>
-Jonas Bartels, Reva Kakaria, Nikhil Trivedi
+**Group 1** — Jonas Bartels, Reva Kakaria, Nikhil Trivedi
 
-### Overview
-This project implements preemptive shortest job first, round robin, and multi-level feedback scheduling, based on the provided specifications and pseudocode. 
+## Overview
+This project simulates **preemptive shortest job first** (`SJF`), **round robin** (`RR`), and **multi-level feedback** (`MLFQ`) scheduling, following the course specification and pseudocode. Jobs arrive from an input file; the simulator advances a discrete clock, handles I/O, and prints per-job statistics.
 
 ### Code files
-```Queue.h/Queue.c``` Implements queue structure and functions as a singly-linked list. Also defines a job struct.<br>
-```Scheduler.h/Scheduler.c``` Implements scheduling functions such as initializing jobs from input file, checking for IO, and adding newly ready jobs to the ready queue.<br>
-```Sort.h/Sort.c```: Implements merge sorting of a queue of jobs based on various attributes of a job (i.e. arrival time, remaining time, etc.).<br>
-```Display.h/Display.c```: Implements the output formatting
+| Module | Role |
+|--------|------|
+| `queue.h` / `queue.c` | Implements queue structure and functions as a singly-linked list. Also defines a job struct. |
+| `scheduler.h` / `scheduler.c` | Implements scheduling functions such as initializing jobs from input file, checking for IO, and adding newly ready jobs to the ready queue. |
+| `sort.h` / `sort.c` | Merge sort of ready queues by arrival time, remaining time, etc. |
+| `display.h` / `display.c` | Formatted statistics output |
+| `main.c` | Outer scheduling loop, preemption hooks, simulation driver |
 
-### How to Compile and Test
+## Build and Run
 
-Run the following commands:
-
-```make```<br>
-```./main```
-
+```bash
+make
+./main
+```
 Enter in either 1, 2, or 3 as prompted to select a scheduling algorithm.
 
-### Assumptions
+- Job definitions are read from **`input_file.txt`** (same directory as the binary; format `pid:arrival:service:priority` per line).
+- The active algorithm is set in **`main.c`** via `algorithm_t schedule` (`RR`, `SJF`, or `MLFQ`). Rebuild after changing it.
+
+Sample traces under `tests/` can be copied or adapted into `input_file.txt` for manual checks.
+
+## Assumptions
 
 To demonstrate our assumptions, the following is a high-level example of how the first iteration of our program works:
 
@@ -36,7 +41,7 @@ At this time, all jobs that could possibly be ready in the next iteration have b
 
 We then determine what the state of the current job will be on the next iteration. If there is no current job because there were no ready jobs to choose from, the loop breaks. This is our implementation of an "idle" process, for the case where no process is running and we do not need to track statistics for this pseudo-process. Otherwise, we update the statistics of the current job, and then we check whether the current job is complete; if not, we check if will be preempted by any of the ready jobs; if not, we check if requests I/O. In each of these cases, the status that the current job should start with on the next iteration is updated.
 
-If the status of the current job is no longer RUNNING (i.e. it is TERMINATED, WAITING, or READY), the inner loop breaks. We return to the outer loop, where we choose a new current job from the ready queue, which has already been sorted by priority. Then we enter the inner loop at t = 2 and repeat the process.
+If the status of the current job is no longer `RUNNING` (i.e. it is `TERMINATED`, `WAITING`, or `READY`), the inner loop breaks. We return to the outer loop, where we choose a new current job from the ready queue, which has already been sorted by priority. Then we enter the inner loop at t = 2 and repeat the process.
 
 Additional assumptions:
 - The priority of jobs is >= 0.
@@ -47,16 +52,12 @@ Additional assumptions:
 - There are no duplicate PIDs.
 - All lines in the input file are in the ```Process Id:Arrival time:Service time:Priority``` format, with no header line.
 
-### Test Cases
-In order to assess the correct implementation of preemption for the shortest jot first and multilevel feedback queue algorithms, we tested our program both with and without the possibility of jobs entering an I/O burst. This included varying number of jobs, arrival times, service times, and priorities. Several test input files are included in the folder ```test_cases```.
+## Test Cases
+In order to assess the correct implementation of preemption for the shortest job first and multilevel feedback queue algorithms, we tested our program both with and without the possibility of jobs entering an I/O burst. This included varying number of jobs, arrival times, service times, and priorities. Several test input files are included in the folder ```test_cases```.
 
-### Results
+## Member Involvement
 
-### Member Involvement
-
-All group members:
-- Brainstorming and approach conception
-- Test cases
+**Everyone** — Problem framing, test cases, and integrating each other’s pieces.
 
 | Member | Focus |
 |--------|--------|
@@ -64,4 +65,4 @@ All group members:
 | Reva | Preemptive SJF; queue and job types; sorting; I/O and parsing glue; README |
 | Nikhil | Round robin; main loop structure and shared scheduling flow |
 
-All group members built upon each others' work and actively worked together to create an approach and logic to apply towards each scheduling algorithm.
+All members iterated on shared design and logic across algorithms.
